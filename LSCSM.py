@@ -32,8 +32,8 @@ class LSCSM(TheanoVisionModel):
             self.lgn_ss = self.add_free_param("size_surround",self.num_lgn,(1,25))
             
             if not self.balanced_LGN:
-               self.lgn_rc = self.add_free_param("center_weight",self.num_lgn,(0,1.0))
-               self.lgn_rs = self.add_free_param("surround_weight",self.num_lgn,(0,1.0))
+               self.lgn_rc = self.add_free_param("center_weight",self.num_lgn,(0.0,10.0))
+               self.lgn_rs = self.add_free_param("surround_weight",self.num_lgn,(0.0,10.0))
 
             if self.LGN_treshold:
                 self.lgn_t = self.add_free_param("lgn_threshold",self.num_lgn,(0,20))
@@ -63,7 +63,8 @@ class LSCSM(TheanoVisionModel):
                 lgn_kernel = lambda i,x,y,sc,ss: T.dot(self.X,(T.exp(-((xx - x[i])**2 + (yy - y[i])**2)/2/sc[i]).T/ (2*sc[i]*numpy.pi)) - (T.exp(-((xx - x[i])**2 + (yy - y[i])**2)/2/ss[i]).T/ (2*ss[i]*numpy.pi)))
                 lgn_output,updates = theano.scan(lgn_kernel , sequences= T.arange(self.num_lgn), non_sequences=[self.lgn_x,self.lgn_y,self.lgn_sc,self.lgn_ss])
             else:
-                lgn_kernel = lambda i,x,y,sc,ss,rc,rs: T.dot(self.X,rc[i]*(T.exp(-((xx - x[i])**2 + (yy - y[i])**2)/2/sc[i]).T/ (2*sc[i]*numpy.pi)) - rs[i]*(T.exp(-((xx - x[i])**2 + (yy - y[i])**2)/2/ss[i]).T/ (2*ss[i]*numpy.pi)))
+                # NOT WE MADE SURROND TO BE SC+SS
+                lgn_kernel = lambda i,x,y,sc,ss,rc,rs: T.dot(self.X,rc[i]*(T.exp(-((xx - x[i])**2 + (yy - y[i])**2)/2/sc[i]).T/ (2*sc[i]*numpy.pi)) - rs[i]*(T.exp(-((xx - x[i])**2 + (yy - y[i])**2)/2/(sc[i]+ss[i])).T/ (2*(sc[i]+ss[i])*numpy.pi)))
                 lgn_output,updates = theano.scan(lgn_kernel,sequences=T.arange(self.num_lgn),non_sequences=[self.lgn_x,self.lgn_y,self.lgn_sc,self.lgn_ss,self.lgn_rc,self.lgn_rs])
             
             lgn_output = lgn_output.T

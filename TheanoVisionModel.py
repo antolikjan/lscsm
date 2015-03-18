@@ -4,7 +4,7 @@ import theano
 theano.config.floatX='float32' 
 from theano import tensor as T
 from theano import function, config, shared 
-from numpy.random import rand
+from numpy.random import rand, seed
 
 class TheanoVisionModel(param.Parameterized):
         """
@@ -183,7 +183,7 @@ class TheanoVisionModel(param.Parameterized):
                         print i
                         print p, ": ", param_vector[i:i+l]
         
-        def create_random_parametrization(self,seed):
+        def create_random_parametrization(self,s):
             """
             This function creates are random parametrization of the model. All values of the returned
             parameter vector are taken from uniform distribution bounded by the bounds associated 
@@ -191,6 +191,7 @@ class TheanoVisionModel(param.Parameterized):
             
             The seed parameter sets the seed of the random number generator used to draw the random vector.
             """
+            seed(s)
             return [a[0] + (a[1]-a[0])/4.0 + rand()*(a[1]-a[0])/2.0  for a in self.bounds]    
             
             
