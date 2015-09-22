@@ -1,78 +1,63 @@
-import __main__
-from LSCSM import LSCSM
-import numpy
-import pylab
+import numpy as np
 from scipy.optimize import fmin_tnc
-from visualization import printCorrelationAnalysis
-from STA import STA_LR
+from visualization import computeCorr
+from traceback import format_exc
+from os import rename
+from checkpointing import saveResults
+    
 
-def fitLSCSM(training_inputs,training_set,validation_inputs,validation_set):
-    num_pres,num_neurons = numpy.shape(training_set) 
+def fitLSCSM(lscsm,Ks,training_inputs,training_set,validation_inputs,validation_set,fit_params={'numEpochs': 100, 'epochSize':1000},checkpointName=None,savecorr=False,savepath=''):
+    """
+    Runs the optimization process (the optimization function is fmin_tnc)
+    """
     
-    print "Creating LSCSM model"
-    lscsm = LSCSM(training_inputs,training_set)
-    print "Created LSCSM model"
-    
-    # create the theano loss function
+    num_pres,num_neurons = np.shape(training_set) 
     func = lscsm.func()
-
-    print "Starting fitting"
     terr=[]
     verr=[]
-    
-    # set initial random values of the model parameter vector
-    Ks = lscsm.create_random_parametrization(13)
-    
-    for i in xrange(0,__main__.__dict__.get('NumEpochs',100)):
-        (Ks,success,c)=fmin_tnc(func ,Ks,fprime=lscsm.der(),bounds=lscsm.bounds,maxfun = __main__.__dict__.get('EpochSize',1000),messages=0)
-        
-        terr.append(func(numpy.array(Ks))/num_neurons/len(training_set))
-        lscsm.X.set_value(validation_inputs)
-        lscsm.Y.set_value(validation_set)
-        verr.append(func(numpy.array(Ks))/num_neurons/len(validation_set))
-        lscsm.X.set_value(training_inputs)
-        lscsm.Y.set_value(training_set)
-        
-        print "Finnised epoch: ", i, "training error: ",  terr[-1], "validation error: ", verr[-1]
-        pylab.plot(verr,'r')
-        pylab.plot(terr,'b')
-        pylab.draw()
-    
+    tcorr=[]
+    vcorr=[]        
+    filenames=[]
 
-    print 'Final training error: ', func(numpy.array(Ks))/num_neurons/len(training_set)
-    lscsm.X.set_value(validation_inputs)
-    lscsm.Y.set_value(validation_set)
-    print 'Final validation error: ', func(numpy.array(Ks))/num_neurons/len(validation_set)
-    
-    lscsm.printParams(Ks)
-    
-    return [Ks,lscsm]   
-  
+    try:
+        print "Starting fitting"  
+        for i in xrange(0,fit_params['numEpochs']):
+            # Do epochSize steps of optimization
+            (Ks,success,c)=fmin_tnc(func ,Ks,fprime=lscsm.der(),bounds=lscsm.bounds,maxfun=fit_params['epochSize'],messages=0) 
+            
+            # Compute temporary training and validation errors
+            terr.append(func(np.array(Ks))/num_neurons/len(training_set))
+            lscsm.X.set_value(validation_inputs)
+            lscsm.Y.set_value(validation_set)
+            verr.append(func(np.array(Ks))/num_neurons/len(validation_set))
+            lscsm.X.set_value(training_inputs)
+            lscsm.Y.set_value(training_set)
+            
+            fit_params['n_rep'] = (i+1)*fit_params['epochSize']
+            
+            if savecorr:
+                # Compute temporary training and validation correlations
+                vcorr.append(computeCorr(lscsm.response(validation_inputs,Ks),validation_set).mean())
+                tcorr.append(computeCorr(lscsm.response(training_inputs,Ks),training_set).mean())              
+            
+            if checkpointName<>None:
+                # Save temporary results into files
+                filenames=saveResults(lscsm,fit_params,K=Ks,errors=[terr,verr],corr=[tcorr,vcorr],prefix=checkpointName,suffix='_temp',outpath=savepath)
+             
+            # Display temporary error and correlation values 
+            if savecorr:
+                print "Finished epoch: ", i, "train error: ",  terr[-1], "val error: ", verr[-1], "train corr:", tcorr[-1], "val corr:", vcorr[-1]
+            else:
+                print "Finished epoch: ", i, "train error: ",  terr[-1], "val error: ", verr[-1]
+        
+        # Remove "_temp" tag from final files        
+        for fn in filenames:
+             rename(fn,fn[:-5])
 
-def runLSCSM():
-    import dataimport
-    
-    # load data
-    (sizex,sizey,training_inputs,training_set,validation_inputs,validation_set,raw_validation_set) = dataimport.sortOutLoading()
-    
-    # fit LSCSM
-    [K,lscsm]=  fitLSCSM(numpy.mat(training_inputs),numpy.mat(training_set),numpy.mat(validation_inputs),numpy.mat(validation_set))
-    
-    # fir STA with laplacian regularization to compare the data
-    rpi = STA_LR(numpy.mat(training_inputs),numpy.mat(training_set),__main__.__dict__.get('RPILaplaceBias',0.0001))
-    
-    #compute the responses of fitted STA model to validation and training set
-    rpi_pred_act = training_inputs * rpi
-    rpi_pred_val_act = validation_inputs * rpi
-    
-    #compute the responses of fitted LSCSM model to validation and training set
-    lscsm_pred_act = lscsm.response(training_inputs,K)
-    lscsm_pred_val_act = lscsm.response(validation_inputs,K)
-    
-    
-    # print correlations between predicted and measures responses for STA and LSCSM
-    print 'STA'
-    printCorrelationAnalysis(training_set,validation_set,rpi_pred_act,rpi_pred_val_act)
-    
-    print 'LSCSM'    
-    printCorrelationAnalysis(training_set,validation_set,lscsm_pred_act,lscsm_pred_val_act)
+    except:
+        # If there was some error, print its description
+        print format_exc()
+            
+    finally:
+        # Even if there was an error, return results:            
+        return [Ks,terr,verr,tcorr,vcorr]
