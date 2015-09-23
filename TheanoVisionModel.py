@@ -128,8 +128,10 @@ class TheanoVisionModel(param.Parameterized):
             This function takes as input some model inputs, and a parametrization of the model, and returns the
             response of the model, with respect to the parametrization and inputs.
             """
+            oldX=self.X.get_value()
             self.X.set_value(X)
             resp = theano.function(inputs=[self.K], outputs=self.model_output,mode='FAST_RUN')
+            self.X.set_value(oldX)
             return resp(kernel)        
         
         def construct_of(self,inn,of):
