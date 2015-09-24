@@ -130,9 +130,10 @@ class TheanoVisionModel(param.Parameterized):
             """
             oldX=self.X.get_value()
             self.X.set_value(X)
-            resp = theano.function(inputs=[self.K], outputs=self.model_output,mode='FAST_RUN')
+            respfunc = theano.function(inputs=[self.K], outputs=self.model_output,mode='FAST_RUN')
+            resp=respfunc(kernel)
             self.X.set_value(oldX)
-            return resp(kernel)        
+            return resp        
         
         def construct_of(self,inn,of):
             """
