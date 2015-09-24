@@ -6,7 +6,7 @@ from os import rename
 from checkpointing import saveResults
     
 
-def fitLSCSM(lscsm,Ks,training_inputs,training_set,validation_inputs,validation_set,fit_params={'numEpochs': 100, 'epochSize':1000},checkpointName=None,savecorr=False,savepath=''):
+def fitLSCSM(lscsm,Ks,training_inputs,training_set,validation_inputs,validation_set,fit_params={},checkpointName=None,compCorr=False):
     """
     Runs the optimization process (the optimization function is fmin_tnc)
     """
@@ -16,8 +16,16 @@ def fitLSCSM(lscsm,Ks,training_inputs,training_set,validation_inputs,validation_
     terr=[]
     verr=[]
     tcorr=[]
-    vcorr=[]        
-    filenames=[]
+    vcorr=[]
+    
+    if not(fit_params.has_key('numEpochs')):
+        fit_params['numEpochs']=100
+    if not(fit_params.has_key('epochSize')):
+        fit_params['epochSize']=1000   
+        
+    # If the number of iterations reached during a previous run (leading to the current value of Ks) hasn't been indicated, set it to 0.
+    if not(fit_params.has_key('n_rep')):# & checkpointName<>None:
+        fit_params['n_rep']=0
 
     try:
         print "Starting fitting"  
@@ -33,26 +41,22 @@ def fitLSCSM(lscsm,Ks,training_inputs,training_set,validation_inputs,validation_
             lscsm.X.set_value(training_inputs)
             lscsm.Y.set_value(training_set)
             
-            fit_params['n_rep'] = (i+1)*fit_params['epochSize']
-            
-            if savecorr:
+                        
+            if compCorr:
                 # Compute temporary training and validation correlations
                 vcorr.append(computeCorr(lscsm.response(validation_inputs,Ks),validation_set).mean())
                 tcorr.append(computeCorr(lscsm.response(training_inputs,Ks),training_set).mean())              
             
             if checkpointName<>None:
                 # Save temporary results into files
-                filenames=saveResults(lscsm,fit_params,K=Ks,errors=[terr,verr],corr=[tcorr,vcorr],prefix=checkpointName,suffix='_temp',outpath=savepath)
+                fit_params['n_rep']+=fit_params['epochSize']
+                saveResults(lscsm,fit_params,K=Ks,errors=[terr,verr],corr=[tcorr,vcorr],prefix=checkpointName)
              
             # Display temporary error and correlation values 
-            if savecorr:
+            if compCorr:
                 print "Finished epoch: ", i, "train error: ",  terr[-1], "val error: ", verr[-1], "train corr:", tcorr[-1], "val corr:", vcorr[-1]
             else:
                 print "Finished epoch: ", i, "train error: ",  terr[-1], "val error: ", verr[-1]
-        
-        # Remove "_temp" tag from final files        
-        for fn in filenames:
-             rename(fn,fn[:-5])
 
     except:
         # If there was some error, print its description
