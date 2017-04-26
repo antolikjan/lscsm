@@ -2,6 +2,7 @@ import numpy
 import param
 import theano
 theano.config.floatX='float32' 
+theano.config.exception_verbosity='high'
 from theano import tensor as T
 from theano import function, config, shared 
 from numpy.random import rand, seed
@@ -25,7 +26,8 @@ class TheanoVisionModel(param.Parameterized):
         
         error_function = param.String(default="LogLikelyhood", doc="The error function definition. Currently LogLikelyhood and MSE are accapted options.")
         log_loss_coefficient = param.Number(default=1.0, doc="The coeficcient that controls the sharpness of the log-loss function elbow.")
-        
+        n_tau = param.Integer(default=1,bounds=(1,1000),doc="""Number of time lags contained in each row of the inputs matrix""")
+
         def __init__(self,XX,YY,**params):
           """
           The constructor sets up various Theano elements that we will need. 
@@ -44,7 +46,7 @@ class TheanoVisionModel(param.Parameterized):
           self.X = theano.shared(XX) # the training inputs matrix
           self.Y = theano.shared(YY) # the training ouputs matrix
 
-          self.size = numpy.sqrt(self.kernel_size)
+          self.size = numpy.sqrt(self.kernel_size*1./self.n_tau)
           
           self.free_params = {}
           self.free_param_count = 0
