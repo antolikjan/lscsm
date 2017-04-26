@@ -31,6 +31,8 @@ class LSCSM(TheanoVisionModel):
       lgn_max_t = param.Number(default=10,bounds=(0,100000000000000),doc="""Maximum value for parameter t of LGN temporal kernel""")
       lgn_max_n = param.Number(default=10,bounds=(0,100000000000000),doc="""Maximum value for parameter n of LGN temporal kernel""")
       lgn_max_Tcoeff = param.Number(default=10,bounds=(0,100000000000000),doc="""Maximum absolute value of LGN temporal kernel coefficients""")
+      n_spike_history=param.Integer(default=0,bounds=(0,1000),doc="""Number of time lags to consider for spike history dependency""")
+      spike_history_bounds=param.NumericTuple(default=(0,1000),length=2,doc="""Bounds for spike history coefficients""")
  
      
       def construct_free_params(self):
@@ -78,6 +80,8 @@ class LSCSM(TheanoVisionModel):
                self.output_w = self.add_free_param("output_weights",(self.num_lgn,self.num_neurons),(minw,self.maximum_weight_l1))
                self.ol_tresh = self.add_free_param("output_layer_threshold",self.num_neurons,self.threshold_bounds)
 
+            if self.n_spike_history>0:
+                self.spike_hist_c = self.add_free_param("spike_history_coefficients",self.n_spike_history,self.spike_history_bounds)
 
       def construct_model(self):
             # construct the 'retinal' x and y coordinates matrices
@@ -119,14 +123,20 @@ class LSCSM(TheanoVisionModel):
             lgn_output = self.construct_of(lgn_output,self.lgnof)
             
             if self.second_layer:
-                  output = T.dot(lgn_output,self.hidden_w)
-                  
-                  model_output = self.construct_of(output-self.hl_tresh,self.v1of)
-                  model_output = self.construct_of(T.dot(model_output , self.output_w) - self.ol_tresh,self.v1of)
+                  output = T.dot(lgn_output,self.hidden_w)                 
+                  output = self.construct_of(output-self.hl_tresh,self.v1of)
+                  output = T.dot(output , self.output_w)
             else:
                   output = T.dot(lgn_output,self.output_w)
-                  model_output = self.construct_of(output-self.ol_tresh,self.v1of)
             
+            if self.n_spike_history>0:
+               added_thresh = lambda past_output: T.dot(self.spike_hist_c,past_output)
+               output_at_t = lambda input_t,*past_output: self.construct_of(input_t-self.ol_tresh-added_thresh(T.as_tensor(past_output)),self.v1of)
+               model_output,updates=theano.scan(output_at_t, outputs_info={'initial':T.zeros([self.n_spike_history,self.num_neurons], dtype='float64'), 'taps':range(-1,-self.n_spike_history-1,-1)}, sequences=output)                
+                
+            else:
+               model_output = self.construct_of(output-self.ol_tresh,self.v1of) 
+                     
             self.model_output = model_output
             
             return model_output
