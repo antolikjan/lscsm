@@ -6,12 +6,12 @@ from LSCSM import LSCSM
 from os.path import isfile
 
 
-def saveMat(mat,filename):
+def saveMat(mat,filename,mode='w'):
     """    
     Saves an array/matrix in binary format
     """    
     mat=np.reshape(np.array(mat),-1)
-    with open(filename,'wb') as f:
+    with open(filename,mode+'b') as f:
         f.write(pack('<%dd'%len(mat),*mat))
         
 
@@ -29,7 +29,7 @@ def saveResults(lscsm,suppl_params,K=None,errors=None,corr=None,prefix='lscsmfit
     
     # Save meta-parameters
     meta_params = dict(lscsm.get_param_values())
-    suppl_params['stimsize']=lscsm.size
+    suppl_params['stimsize']=int(lscsm.size)
     suppl_params['date']=str(datetime.now().date())+'-'+str(datetime.now().time())[:8]
     with open(prefix+'_metaparams','w') as f:
         f.write('meta_params = {\n'+pformat(meta_params)[1:]+'\n\n')
@@ -86,13 +86,15 @@ def restoreLSCSM(checkpointname,training_inputs,training_set,update_mp={}):
     """
     # Load and update meta-parameters, use them to recreate the lscsm object
     meta_params, suppl_params = loadParams(checkpointname+'_metaparams')
-    meta_params.update(update_mp)
-    lscsm=LSCSM(training_inputs,training_set,**meta_params) 
+    new_mp=meta_params.copy()
+    new_mp.update(update_mp)
+    lscsm=LSCSM(training_inputs,training_set,**new_mp) 
     
     # Load K (return None if file not found)
     if isfile(checkpointname+'_K'):
         K=loadVec(checkpointname+'_K')
-        if not(all([update_mp.keys()[i] in ['error_function', 'name'] for i in range(len(update_mp.keys()))])):
+        #if not(all([update_mp.keys()[i] in ['error_function', 'name'] for i in range(len(update_mp.keys()))])):
+        if not(all([update_mp[key]==meta_params[key] for key in set(update_mp.keys())-set(['error_function', 'name'])])):    
             print 'WARNING: Updating of meta-parameters might have changed model structure: the reloaded parameter vector (K) might not be compatible with it'
     else:
         K=None
