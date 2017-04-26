@@ -155,6 +155,12 @@ class TheanoVisionModel(param.Parameterized):
                return T.exp(T.sqr(inn))
             elif of == 'LogisticLoss':
                return self.log_loss_coefficient*T.log(1+T.exp(self.log_loss_coefficient*inn))
+            elif of == 'Rectification':
+                return T.maximum(inn,0)
+            elif of == 'SquaredRectif':
+                return T.sqr(T.maximum(inn,0))
+            elif of == 'Pow3Rectif':
+                return T.pow(T.maximum(inn,0),3)
         
         def getParam(self,param_vector,param_name):
             """
