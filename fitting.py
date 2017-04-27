@@ -13,6 +13,7 @@ def fitLSCSM(lscsm,Ks,training_inputs,training_set,validation_inputs,validation_
     
     num_pres,num_neurons = np.shape(training_set) 
     func = lscsm.func()
+    der = lscsm.der()
     
     if not(fit_params.has_key('numEpochs')):
         fit_params['numEpochs']=100
