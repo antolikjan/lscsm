@@ -24,9 +24,9 @@ class TheanoVisionModel(param.Parameterized):
         See their documentation for their role.
         """
         
-        error_function = param.String(default="LogLikelyhood", doc="The error function definition. Currently LogLikelyhood and MSE are accapted options.")
+        error_function = param.ObjectSelector(default="LogLikelyhood", objects=['LogLikelyhood','MSE'], doc="The error function definition.")
         log_loss_coefficient = param.Number(default=1.0, doc="The coeficcient that controls the sharpness of the log-loss function elbow.")
-        n_tau = param.Integer(default=1,bounds=(1,1000),doc="""Number of time lags contained in each row of the inputs matrix""")
+        n_tau = param.Integer(default=1,bounds=(1,1000), doc="""Number of time lags contained in each row of the inputs matrix""")
 
         def __init__(self,XX,YY,**params):
           """
