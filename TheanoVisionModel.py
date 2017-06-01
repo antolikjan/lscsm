@@ -1,7 +1,6 @@
 import numpy
 import param
 import theano
-theano.config.floatX='float32' 
 theano.config.exception_verbosity='high'
 from theano import tensor as T
 from theano import function, config, shared 
@@ -43,15 +42,15 @@ class TheanoVisionModel(param.Parameterized):
           (self.num_pres,self.num_neurons) = numpy.shape(YY)
           
           
-          self.X = theano.shared(XX) # the training inputs matrix
-          self.Y = theano.shared(YY) # the training ouputs matrix
+          self.X = theano.shared(XX.astype(theano.config.floatX), name='X') # the training inputs matrix
+          self.Y = theano.shared(YY.astype(theano.config.floatX), name='Y') # the training ouputs matrix
 
           self.size = numpy.sqrt(self.kernel_size*1./self.n_tau)
           
           self.free_params = {}
           self.free_param_count = 0
         
-          self.K = T.dvector('K') #This will hold the free-parameters Theano vector 
+          self.K = T.vector('K') #This will hold the free-parameters Theano vector 
           self.bounds = [] #This will hold the bounds           
         
           self.construct_free_params()
@@ -115,7 +114,7 @@ class TheanoVisionModel(param.Parameterized):
             Returns theano created function, that takes model parametrization as input (a vector of floats), and returns the 
             response of the model to the training set stored in self.X as output.
             """
-            return theano.function(inputs=[self.K], outputs=self.model,mode='FAST_RUN')
+            return theano.function(inputs=[self.K], outputs=self.model,mode='FAST_RUN', allow_input_downcast=True)
         
         def der(self):
             """
@@ -123,7 +122,7 @@ class TheanoVisionModel(param.Parameterized):
             response of the first derivative of the model to the training set stored in self.X as output.
             """
             g_K = T.grad(self.model, self.K)
-            return theano.function(inputs=[self.K], outputs=g_K,mode='FAST_RUN')
+            return theano.function(inputs=[self.K], outputs=g_K,mode='FAST_RUN', allow_input_downcast=True)
         
         def response(self,X,kernel):
             """
@@ -132,7 +131,7 @@ class TheanoVisionModel(param.Parameterized):
             """
             oldX=self.X.get_value()
             self.X.set_value(X)
-            respfunc = theano.function(inputs=[self.K], outputs=self.model_output,mode='FAST_RUN')
+            respfunc = theano.function(inputs=[self.K], outputs=self.model_output,mode='FAST_RUN', allow_input_downcast=True)
             resp=respfunc(kernel)
             self.X.set_value(oldX)
             return resp        

@@ -25,17 +25,19 @@ def fitLSCSM(lscsm,Ks,training_inputs,training_set,validation_inputs,validation_
         fit_params['n_rep']=0   
 
     # Compute initial training and validation errors    
-    lscsm.X.set_value(validation_inputs)
-    lscsm.Y.set_value(validation_set)
+    lscsm.X.set_value(validation_inputs.astype(lscsm.X.dtype))
+    lscsm.Y.set_value(validation_set.astype(lscsm.Y.dtype))
     verr=[func(np.array(Ks))/num_neurons/len(validation_set)]
-    lscsm.X.set_value(training_inputs)
-    lscsm.Y.set_value(training_set)
+    lscsm.X.set_value(training_inputs.astype(lscsm.X.dtype))
+    lscsm.Y.set_value(training_set.astype(lscsm.Y.dtype))
     terr=[func(np.array(Ks))/num_neurons/len(training_set)]     
                         
     if compCorr:
         # Compute initial training and validation correlations
         vcorr=[computeCorr(lscsm.response(validation_inputs,Ks),validation_set).mean()]
         tcorr=[computeCorr(lscsm.response(training_inputs,Ks),training_set).mean()]
+    else:
+        tcorr=vcorr=None
     
     if fit_params['n_rep']>0:
         try:
@@ -60,11 +62,11 @@ def fitLSCSM(lscsm,Ks,training_inputs,training_set,validation_inputs,validation_
                 print 'Number of function evaluations:', str(success)
             # Compute temporary training and validation errors
             terr.append(func(np.array(Ks))/num_neurons/len(training_set))
-            lscsm.X.set_value(validation_inputs)
-            lscsm.Y.set_value(validation_set)
+            lscsm.X.set_value(validation_inputs.astype(lscsm.X.dtype))
+            lscsm.Y.set_value(validation_set.astype(lscsm.Y.dtype))
             verr.append(func(np.array(Ks))/num_neurons/len(validation_set))
-            lscsm.X.set_value(training_inputs)
-            lscsm.Y.set_value(training_set)
+            lscsm.X.set_value(training_inputs.astype(lscsm.X.dtype))
+            lscsm.Y.set_value(training_set.astype(lscsm.Y.dtype))
                                   
             if compCorr:
                 # Compute temporary training and validation correlations

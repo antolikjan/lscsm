@@ -94,7 +94,7 @@ def restoreLSCSM(checkpointname,training_inputs,training_set,update_mp={}):
     if isfile(checkpointname+'_K'):
         K=loadVec(checkpointname+'_K')
         #if not(all([update_mp.keys()[i] in ['error_function', 'name'] for i in range(len(update_mp.keys()))])):
-        if not(all([update_mp[key]==meta_params[key] for key in set(update_mp.keys())-set(['error_function', 'name'])])):    
+        if not(all([update_mp[key]==meta_params[key] for key in set(update_mp.keys()).intersection(meta_params.keys())-set(['error_function', 'name'])])):    
             print 'WARNING: Updating of meta-parameters might have changed model structure: the reloaded parameter vector (K) might not be compatible with it'
     else:
         K=None
