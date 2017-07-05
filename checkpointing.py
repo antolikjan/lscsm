@@ -51,14 +51,16 @@ def saveResults(lscsm,suppl_params,K=None,errors=None,corr=None,prefix='lscsmfit
     return filenames         
 
 
-def loadVec(filename):
+def loadVec(filename,fmt='d',endian='<'):
     """
     Load an array/matrix stored in binary format
     """     
+    itemsize=len(pack(endian+'1'+fmt,1.))
     with open(filename,'rb') as f:
         binary=f.read()
-    assert len(binary)%8==0
-    return np.array(unpack('<%dd'%(len(binary)/8),binary))
+    assert len(binary)%itemsize==0
+    n_items=int(len(binary)/itemsize)
+    return np.array(unpack(endian+str(n_items)+fmt, binary))
     
     
 def loadParams(filename):
@@ -79,7 +81,7 @@ def loadErrCorr(filename):
     return vec[:len(vec)/2], vec[len(vec)/2:]
     
     
-def restoreLSCSM(checkpointname,training_inputs,training_set,update_mp={}):
+def restoreLSCSM(checkpointname,training_inputs,training_set,update_mp={},update_sp={}):
     """
     Reloads meta-parameters of a checkpointed fit, updates some of them using update_mp, then uses them and the provided data to recreate a lscsm object
     Also loads and returns the associated parameter vector K and the suppl_params dictionary (supplementary parameters used for fitting, or in fact can contain any information one wants to store)  
@@ -88,6 +90,7 @@ def restoreLSCSM(checkpointname,training_inputs,training_set,update_mp={}):
     meta_params, suppl_params = loadParams(checkpointname+'_metaparams')
     new_mp=meta_params.copy()
     new_mp.update(update_mp)
+    suppl_params.update(update_sp)
     lscsm=LSCSM(training_inputs,training_set,**new_mp) 
     
     # Load K (return None if file not found)

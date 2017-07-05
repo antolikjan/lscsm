@@ -45,18 +45,17 @@ class TheanoVisionModel(param.Parameterized):
           self.X = theano.shared(XX.astype(theano.config.floatX), name='X') # the training inputs matrix
           self.Y = theano.shared(YY.astype(theano.config.floatX), name='Y') # the training ouputs matrix
 
-          self.size = numpy.sqrt(self.kernel_size*1./self.n_tau)
+          self.size = int(numpy.sqrt(self.kernel_size*1./self.n_tau))
           
           self.free_params = {}
           self.free_param_count = 0
-        
+                   
           self.K = T.vector('K') #This will hold the free-parameters Theano vector 
           self.bounds = [] #This will hold the bounds           
         
           self.construct_free_params()
           output = self.construct_model()
           self.construct_error_function(output)
-          
         
         def add_free_param(self,name,shape,bounds):
           """
@@ -123,7 +122,7 @@ class TheanoVisionModel(param.Parameterized):
             """
             g_K = T.grad(self.model, self.K)
             return theano.function(inputs=[self.K], outputs=g_K,mode='FAST_RUN', allow_input_downcast=True)
-        
+                
         def response(self,X,kernel):
             """
             This function takes as input some model inputs, and a parametrization of the model, and returns the
@@ -167,13 +166,16 @@ class TheanoVisionModel(param.Parameterized):
             """
             Returns the subvector of param_vector corresponding to the parameter in param_name.
             """
-            if type(self.free_params[param_name][1]) == tuple:
+            if (type(self.free_params[param_name][1]) == tuple) & (type(param_vector[0]) not in [list, tuple]):
                     (i,t) = self.free_params[param_name]
                     (x,y) = t
-                    return T.reshape(param_vector[i:i+x*y],(x,y))
+                    if type(param_vector) in [numpy.ndarray, list]:
+                        return numpy.array(param_vector[i:i+x*y]).reshape(x,y)
+                    else:
+                        return T.reshape(param_vector[i:i+x*y],(x,y))
             else:   
                     (i,l) = self.free_params[param_name]
-                    return param_vector[i:i+l]
+                    return param_vector[i:i+numpy.prod(l)]
         
         
         def printParams(self,param_vector,param_names=None):
@@ -203,5 +205,4 @@ class TheanoVisionModel(param.Parameterized):
             """
             seed(s)
             return [a[0] + (a[1]-a[0])/4.0 + rand()*(a[1]-a[0])/2.0  for a in self.bounds]    
-            
-            
+        
