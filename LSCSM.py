@@ -95,7 +95,12 @@ class LSCSM(TheanoVisionModel):
       def construct_model(self):
             # construct the 'retinal' x and y coordinates matrices
             # = list of x-coordinates and list of y-coordinates for each position in the grid
-            tt = theano.shared(numpy.repeat([numpy.arange(0,self.n_tau,1,dtype=theano.config.floatX)],self.size**2,axis=0).T.flatten())
+            #tt = theano.shared(numpy.repeat([numpy.arange(0,self.n_tau,1,dtype=theano.config.floatX)],self.size**2,axis=0).T.flatten())
+            if self.temporal_kernel=='Custom':
+                tt_type=int
+            else:
+                tt_type=theano.config.floatX
+            tt = theano.shared(numpy.repeat([numpy.arange(0,self.n_tau,1,dtype=tt_type)],self.size**2,axis=0).T.flatten())
             xx = theano.shared(numpy.repeat([numpy.repeat([numpy.arange(0,self.size,1,dtype=theano.config.floatX)],self.size,axis=0).T],self.n_tau,axis=0).flatten())   
             yy = theano.shared(numpy.repeat([numpy.arange(0,self.size,1,dtype=theano.config.floatX)],self.size*self.n_tau,axis=0).flatten())  
                        
