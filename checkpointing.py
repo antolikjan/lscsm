@@ -2,7 +2,7 @@ import numpy as np
 from datetime import datetime
 from pprint import pformat
 from struct import pack, unpack
-from LSCSM import LSCSM  
+from HSM import HSM  
 from os.path import isfile
 
 
@@ -23,9 +23,9 @@ def saveResults(lscsm,suppl_params,K=None,errors=None,corr=None,prefix='lscsmfit
     filenames=[]
    
     # Save K (lscsm parameters)   
-    if not(K in [None,[]]):
-        saveMat(K,prefix+'_K')
-        filenames.append(prefix+'_K')
+    #if not(K in [None,[]]):
+    saveMat(K,prefix+'_K')
+    filenames.append(prefix+'_K')
     
     # Save meta-parameters
     meta_params = dict(lscsm.get_param_values())
